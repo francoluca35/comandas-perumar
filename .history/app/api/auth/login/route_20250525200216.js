@@ -1,0 +1,66 @@
+import clientPromise from "@/lib/mongodb";
+import { comparePasswords } from "@/utils/encrypt";
+import { NextResponse } from "next/server";
+import { ObjectId } from "mongodb";
+
+export const dynamic = "force-dynamic";
+
+export async function POST(req) {
+  try {
+    const body = await req.text(); // <-- CAMBIO CRÍTICO
+    const { username, password } = JSON.parse(body); // <-- DECODEO MANUAL
+
+    if (!username || !password) {
+      return NextResponse.json(
+        { error: "Faltan credenciales" },
+        { status: 400 }
+      );
+    }
+
+    const client = await clientPromise;
+    const db = client.db("comandas");
+
+    const user = await db.collection("users").findOne({ username });
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "Usuario no encontrado" },
+        { status: 401 }
+      );
+    }
+
+    const isValid = await comparePasswords(password, user.password);
+    if (!isValid) {
+      return NextResponse.json(
+        { error: "Contraseña incorrecta" },
+        { status: 401 }
+      );
+    }
+
+    // 👉 REGISTRAR INICIO DE TURNO
+    await db.collection("turnos").insertOne({
+      userId: user._id ?? new ObjectId(),
+      username: user.username,
+      inicio: new Date(),
+      online: true,
+      createdAt: new Date(), // Necesario para TTL
+    });
+
+    // 👉 RESPONDER AL CLIENTE
+    return NextResponse.json({
+      user: {
+        username: user.username,
+        email: user.email,
+        rol: user.rol,
+        nombreCompleto: user.nombreCompleto,
+        imagen: user.imagen,
+      },
+    });
+  } catch (error) {
+    console.error("🔥 Error en login:", error);
+    return NextResponse.json(
+      { error: "Error interno del servidor" },
+      { status: 500 }
+    );
+  }
+}

@@ -1,0 +1,40 @@
+export const runtime = "nodejs";
+
+import mercadopago from "mercadopago";
+
+mercadopago.configure({
+  access_token: process.env.MERCADO_PAGO_ACCESS_TOKEN,
+});
+
+export async function GET(req) {
+  const { searchParams } = new URL(req.url);
+  const externalReference = searchParams.get("externalReference");
+
+  try {
+    const searchResult = await mercadopago.payment.search({
+      qs: {
+        external_reference: `${mesa}`,
+
+        sort: "date_created",
+        criteria: "desc",
+      },
+    });
+
+    const payment = searchResult.body.results[0];
+    const status = payment?.status || "pending";
+
+    return new Response(JSON.stringify({ status }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  } catch (error) {
+    console.error("Error al consultar estado:", error);
+    return new Response(
+      JSON.stringify({ error: "Error al consultar estado" }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+  }
+}

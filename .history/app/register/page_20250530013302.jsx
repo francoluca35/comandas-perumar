@@ -1,0 +1,148 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Image from "next/image";
+
+export default function RegisterPage() {
+  const router = useRouter();
+  const [form, setForm] = useState({
+    username: "",
+    email: "",
+    password: "",
+    nombreCompleto: "",
+    rol: "delivery",
+  });
+  const [foto, setFoto] = useState(null);
+  const [error, setError] = useState("");
+
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const handleFileChange = (e) => {
+    setFoto(e.target.files[0]);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    const formData = new FormData();
+    Object.entries(form).forEach(([key, value]) => {
+      formData.append(key, value);
+    });
+    if (foto) formData.append("foto", foto);
+
+    const res = await fetch("/api/auth/register", {
+      method: "POST",
+      body: formData,
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      setError(data.error);
+      return;
+    }
+
+    router.push("/login");
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-600 via-black to-blue-950">
+      <div className="w-full max-w-sm bg-white/5 backdrop-blur-md p-8 rounded-xl shadow-2xl">
+        <div className="transition-all duration-500 hover:scale-[1.01]">
+          {/* LOGO */}
+          <div className="flex justify-center mb-6">
+            <Image
+              src="/Assets/LoginRegister/logo.pnng"
+              alt="Logo"
+              width={64}
+              height={64}
+            />
+          </div>
+
+          <h2 className="text-white text-2xl font-semibold text-center mb-4">
+            Crear cuenta
+          </h2>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <input
+              type="text"
+              name="nombreCompleto"
+              placeholder="Nombre Completo"
+              onChange={handleChange}
+              className="w-full px-4 py-2 rounded bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all duration-300"
+            />
+
+            <input
+              type="text"
+              name="username"
+              placeholder="Nombre de usuario"
+              onChange={handleChange}
+              className="w-full px-4 py-2 rounded bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all duration-300"
+              required
+            />
+
+            <input
+              type="email"
+              name="email"
+              placeholder="Correo electrónico"
+              onChange={handleChange}
+              className="w-full px-4 py-2 rounded bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all duration-300"
+              required
+            />
+
+            <input
+              type="password"
+              name="password"
+              placeholder="Contraseña"
+              onChange={handleChange}
+              className="w-full px-4 py-2 rounded bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all duration-300"
+              required
+            />
+
+            {error && (
+              <p className="text-red-400 text-sm text-center animate-pulse">
+                {error}
+              </p>
+            )}
+            <select
+              name="rol"
+              value={form.rol}
+              onChange={handleChange}
+              className="w-full px-4 py-2 rounded bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all duration-300"
+              required
+            >
+              <option value="admin">Administrador</option>
+              <option value="delivery">Repartidor</option>
+            </select>
+            <input
+              type="file"
+              name="foto"
+              accept="image/*"
+              onChange={handleFileChange}
+              required
+            />
+
+            <button
+              type="submit"
+              className="w-full bg-orange-500 text-white py-2 rounded-md font-semibold hover:bg-orange-600 transition-all duration-300"
+            >
+              Registrarse
+            </button>
+          </form>
+
+          <p className="text-gray-300 text-center text-sm mt-6">
+            ¿Ya tenés cuenta?{" "}
+            <a
+              href="/login"
+              className="text-orange-400 font-semibold hover:underline"
+            >
+              Iniciar sesión
+            </a>
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,320 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Swal from "sweetalert2";
+import BackArrow from "@/app/components/ui/BackArrow";
+
+export default function AddTavolo() {
+  const [tipo, setTipo] = useState("");
+  const [cantidad, setCantidad] = useState(1);
+  const [mensaje, setMensaje] = useState("");
+  const [totalAdentro, setTotalAdentro] = useState(0);
+  const [totalAfuera, setTotalAfuera] = useState(0);
+  const [totalAdentro2, setTotalAdentro2] = useState(0);
+  const [mesasAdentro, setMesasAdentro] = useState([]);
+  const [mesasAfuera, setMesasAfuera] = useState([]);
+  const [mesasAdentro2, setMesasAdentro2] = useState([]);
+  const [mostrarEliminar, setMostrarEliminar] = useState(false);
+  const [seleccionadas, setSeleccionadas] = useState([]);
+
+  useEffect(() => {
+    const fetchMesas = async () => {
+      try {
+        const res = await fetch("/api/mesas");
+        const data = await res.json();
+        if (Array.isArray(data) && data[0]) {
+          setMesasAdentro(data[0].mesaAdentro);
+          setMesasAdentro2(data[0].mesaAdentro2);
+          setMesasAfuera(data[0].mesaAfuera);
+          setTotalAdentro(data[0].mesaAdentro.length);
+          setTotalAdentro2(data[0].mesaAdentro2.length);
+          setTotalAfuera(data[0].mesaAfuera.length);
+        }
+      } catch (error) {
+        console.error("Error al cargar mesas:", error);
+      }
+    };
+    fetchMesas();
+  }, []);
+
+  const handleSubmit = async () => {
+    if (!tipo || tipo.trim() === "") {
+      setMensaje("Debes seleccionar el tipo de mesa");
+      return;
+    }
+
+    console.log("Enviando tipo:", tipo.trim(), "Cantidad:", cantidad);
+
+    try {
+      const res = await fetch("/api/mesas/agregar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tipo: tipo.trim(),
+          cantidad: parseInt(cantidad),
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        Swal.fire({
+          title: "Mesas agregadas exitosamente",
+          text: "¿Deseás agregar más mesas?",
+          icon: "success",
+          showCancelButton: true,
+          confirmButtonText: "Sí, agregar más",
+          cancelButtonText: "No, cerrar",
+        }).then((result) => {
+          if (!result.isConfirmed) {
+            setTipo("");
+            setCantidad(1);
+            setMensaje("");
+            location.reload();
+          }
+        });
+      } else {
+        setMensaje(data.error || "Error al agregar mesas");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      setMensaje("Error en la solicitud");
+    }
+  };
+
+  const toggleSeleccion = (codigo) => {
+    setSeleccionadas((prev) =>
+      prev.includes(codigo)
+        ? prev.filter((c) => c !== codigo)
+        : [...prev, codigo]
+    );
+  };
+
+  const eliminarMesas = async () => {
+    if (seleccionadas.length === 0) return;
+    const confirm = await Swal.fire({
+      title: "¿Eliminar mesas seleccionadas?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Sí, eliminar",
+      cancelButtonText: "Cancelar",
+    });
+
+    if (!confirm.isConfirmed) return;
+
+    try {
+      const res = await fetch("/api/mesas/eliminar", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ codigos: seleccionadas }),
+      });
+
+      if (res.ok) {
+        Swal.fire("Eliminado", "Las mesas fueron eliminadas", "success");
+        setSeleccionadas([]);
+        setMostrarEliminar(false);
+        location.reload(); // refresca para recargar los datos
+      } else {
+        Swal.fire("Error", "No se pudieron eliminar mesas", "error");
+      }
+    } catch (err) {
+      Swal.fire("Error", "No se pudo conectar con el servidor", "error");
+    }
+  };
+
+  return (
+    <section className="w-full min-h-screen bg-gradient-to-br from-red-600 via-black to-blue-950 py-16 px-4">
+      <div className="max-w-2xl mx-auto backdrop-blur-lg bg-white/5 rounded-3xl p-6 md:p-10 border border-gray-700 shadow-2xl relative overflow-hidden">
+        <div className="absolute top-4 left-4">
+          <BackArrow label="Volver al panel" />
+        </div>
+
+        <h2 className="text-3xl mt-4 md:text-4xl font-bold text-white mb-6 text-center">
+          ➕ Agregar Mesas
+        </h2>
+
+        <div className="bg-white/10 p-4 rounded-xl text-white mb-6 text-sm">
+          <p>
+            Mesas adentro A: <strong>{totalAdentro}</strong>
+          </p>
+          <p>
+            Mesas adentro B: <strong>{totalAdentro2}</strong>
+          </p>
+          <p>
+            Mesas afuera: <strong>{totalAfuera}</strong>
+          </p>
+        </div>
+
+        <div className="space-y-4">
+          <label className="block text-sm font-medium text-white">
+            Seleccionar tipo de mesa
+          </label>
+          <select
+            value={tipo}
+            onChange={(e) => setTipo(e.target.value)}
+            className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-2 text-white"
+          >
+            <option value="">-- Seleccionar --</option>
+            <option value="mesaAdentro">🍽 Mesa Adentro A</option>
+            <option value="mesaAdentro2">🍽 Mesa Adentro B</option>
+            <option value="mesaAfuera">🌤 Mesa Afuera</option>
+          </select>
+
+          {tipo && (
+            <>
+              <label className="block text-sm font-medium text-white">
+                Cantidad de mesas a agregar
+              </label>
+              <input
+                type="number"
+                value={cantidad}
+                onChange={(e) => setCantidad(e.target.value)}
+                className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-2 text-white"
+                min={1}
+              />
+            </>
+          )}
+
+          <button
+            onClick={handleSubmit}
+            disabled={!tipo}
+            className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl disabled:opacity-40"
+          >
+            Agregar Mesas
+          </button>
+
+          {mensaje && (
+            <p className="text-sm text-white text-center">{mensaje}</p>
+          )}
+          <button
+            onClick={() => setMostrarEliminar(!mostrarEliminar)}
+            className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl"
+          >
+            🗑 Eliminar Mesas
+          </button>
+          {mostrarEliminar && (
+            <div className="mt-6 space-y-4">
+              <h3 className="text-white text-center font-semibold mb-4">
+                Seleccioná las mesas que querés eliminar
+              </h3>
+
+              <div className="grid grid-cols-4 gap-3">
+                {[...mesasAdentro, ...mesasAdentro2, ...mesasAfuera].map(
+                  (mesa) => (
+                    <button
+                      key={mesa.codigo}
+                      onClick={() => toggleSeleccion(mesa.codigo)}
+                      className={`px-3 py-2 rounded-xl font-bold border text-sm transition-all duration-200 ${
+                        seleccionadas.includes(mesa.codigo)
+                          ? "bg-red-500 text-white border-red-600"
+                          : "bg-white/10 text-white border-white/20 hover:bg-white/20"
+                      }`}
+                    >
+                      {mesa.numero}
+                    </button>
+                  )
+                )}
+              </div>
+
+              {seleccionadas.length > 0 && (
+                <div className="mt-4">
+                  <button
+                    onClick={eliminarMesas}
+                    className="w-full bg-red-700 hover:bg-red-800 text-white py-2 rounded-xl"
+                  >
+                    Confirmar eliminación manual
+                  </button>
+                </div>
+              )}
+
+              {/* NUEVO: eliminación por cantidad */}
+              <div className="mt-8 space-y-2">
+                <label className="text-white text-sm block font-semibold">
+                  Elegí tipo y cantidad para eliminar
+                </label>
+                <select
+                  value={tipo}
+                  onChange={(e) => setTipo(e.target.value)}
+                  className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-2 text-white"
+                >
+                  <option value="">-- Seleccionar tipo --</option>
+                  <option value="mesaAdentro">🍽 Mesa Adentro A</option>
+                  <option value="mesaAdentro2">🍽 Mesa Adentro B</option>
+                  <option value="mesaAfuera">🌤 Mesa Afuera</option>
+                </select>
+
+                <input
+                  type="number"
+                  min={1}
+                  value={cantidad}
+                  onChange={(e) => setCantidad(e.target.value)}
+                  className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-2 text-white"
+                  placeholder="Cantidad de mesas a eliminar"
+                />
+
+                <button
+                  onClick={async () => {
+                    if (!tipo || !cantidad || cantidad <= 0) {
+                      return Swal.fire(
+                        "Error",
+                        "Seleccioná un tipo y cantidad válida",
+                        "warning"
+                      );
+                    }
+
+                    const confirm = await Swal.fire({
+                      title: "¿Eliminar mesas?",
+                      text: `¿Seguro que querés eliminar ${cantidad} mesas del tipo ${tipo}?`,
+                      icon: "warning",
+                      showCancelButton: true,
+                      confirmButtonText: "Sí, eliminar",
+                      cancelButtonText: "Cancelar",
+                    });
+
+                    if (!confirm.isConfirmed) return;
+
+                    try {
+                      const res = await fetch("/api/mesas/eliminar-cantidad", {
+                        method: "DELETE",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          tipo,
+                          cantidad: parseInt(cantidad),
+                        }),
+                      });
+
+                      if (res.ok) {
+                        Swal.fire(
+                          "Eliminado",
+                          "Mesas eliminadas exitosamente",
+                          "success"
+                        );
+                        setSeleccionadas([]);
+                        setMostrarEliminar(false);
+                        location.reload();
+                      } else {
+                        Swal.fire(
+                          "Error",
+                          "No se pudieron eliminar mesas",
+                          "error"
+                        );
+                      }
+                    } catch (error) {
+                      Swal.fire(
+                        "Error",
+                        "No se pudo conectar con el servidor",
+                        "error"
+                      );
+                    }
+                  }}
+                  className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 rounded-xl"
+                >
+                  Eliminar por cantidad
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
