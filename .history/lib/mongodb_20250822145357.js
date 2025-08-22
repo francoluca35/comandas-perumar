@@ -13,12 +13,11 @@ if (!global._mongoClientPromise) {
     const options = {
       maxPoolSize: 10,
       minPoolSize: 0,
-      serverSelectionTimeoutMS: 10000,
-      socketTimeoutMS: 15000,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 10000,
       serverApi: { version: "1", strict: true, deprecationErrors: true },
-      tls: true,
-      tlsAllowInvalidCertificates: true,
-      tlsAllowInvalidHostnames: true,
+      ssl: false,
+      tls: false,
     };
 
     client = new MongoClient(uri, options);

@@ -52,7 +52,6 @@ export async function POST(req) {
     
     console.log("✅ Contraseña válida");
 
-    console.log("🔄 Verificando turno existente...");
     // ✅ Evitar duplicado de turno activo
     const turnoExistente = await db.collection("turnos").findOne({
       username: user.username,
@@ -60,7 +59,6 @@ export async function POST(req) {
     });
 
     if (!turnoExistente) {
-      console.log("📝 Creando nuevo turno para:", user.username);
       await db.collection("turnos").insertOne({
         userId: user._id ?? new ObjectId(),
         username: user.username,
@@ -68,26 +66,21 @@ export async function POST(req) {
         online: true,
         createdAt: new Date(),
       });
-    } else {
-      console.log("✅ Turno existente encontrado");
     }
 
-    const userResponse = {
-      username: user.username,
-      email: user.email,
-      rol: user.rol,
-      nombreCompleto: user.nombreCompleto,
-      imagen: user.imagen,
-    };
-
-    console.log("✅ Login exitoso para:", user.username);
-    console.log("📤 Enviando respuesta:", userResponse);
-
-    return NextResponse.json({ user: userResponse });
+    return NextResponse.json({
+      user: {
+        username: user.username,
+        email: user.email,
+        rol: user.rol,
+        nombreCompleto: user.nombreCompleto,
+        imagen: user.imagen,
+      },
+    });
   } catch (error) {
     console.error("🔥 Error en login:", error);
     return NextResponse.json(
-      { error: "Error interno del servidor", details: error.message },
+      { error: "Error interno del servidor" },
       { status: 500 }
     );
   }
