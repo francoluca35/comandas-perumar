@@ -20,7 +20,7 @@ function generarTicketPago({ mesa, productos, total, metodoPago, nombreCliente, 
   const orden = Math.floor(Math.random() * 1000000000000);
 
   let ticket = "";
-  ticket += doble + `     RESTO CELINA CITY\n`;
+  ticket += doble + `     PERÚ MAR\n`;
   ticket += "======================\n";
   ticket += normal;
   ticket += `MESA: ${mesa}\n`;
@@ -83,33 +83,27 @@ export async function POST(req) {
     const body = await req.json();
     const { mesa, productos, total, metodoPago, nombreCliente, propina, descuento } = body;
 
-    // Enviar al servidor Express
-    const response = await fetch(`${PRINT_SERVER_URL}/print-payment`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        mesa,
-        productos,
-        total,
-        metodoPago,
-        nombreCliente: nombreCliente || "Cliente",
-        propina: propina || 0,
-        descuento: descuento || 0,
-      }),
+    // Generar el ticket
+    const contenidoTicket = generarTicketPago({
+      mesa,
+      productos,
+      total,
+      metodoPago,
+      nombreCliente: nombreCliente || "Cliente",
+      propina: propina || 0,
+      descuento: descuento || 0,
     });
 
-    if (response.ok) {
-      const data = await response.json();
-      console.log("✅ Ticket impreso:", data.message);
-      
-      return NextResponse.json({ 
-        success: true, 
-        message: data.message,
-        data: { mesa, total, metodoPago }
-      });
-    } else {
-      throw new Error(`Error del servidor: ${response.status}`);
-    }
+    // Enviar a la impresora
+    const resultado = await imprimirTicket(IP_COCINA, contenidoTicket);
+    
+    console.log("✅ Ticket impreso:", resultado);
+    
+    return NextResponse.json({ 
+      success: true, 
+      message: resultado,
+      data: { mesa, total, metodoPago }
+    });
     
   } catch (err) {
     console.error("❌ Error al imprimir ticket:", err);
