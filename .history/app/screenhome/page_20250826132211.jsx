@@ -9,7 +9,6 @@ import UserDropdown from "../components/ui/UserDropdown";
 import AbrirCaja from "../components/ui/AbrirCaja";
 import { db } from "@/lib/firebase";
 import { onValue, ref, remove } from "firebase/database";
-import Swal from "sweetalert2";
 
 export default function ScreenHome() {
   const { user } = useAuth();
