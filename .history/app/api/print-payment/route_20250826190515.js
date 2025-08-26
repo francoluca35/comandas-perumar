@@ -42,12 +42,10 @@ function generarTicketPago({ mesa, productos, total, metodoPago, nombreCliente, 
   }, {});
 
   // Imprimir productos agrupados
-  ticket += normal + "cant   producto                    precio\n";
   for (const nombre in productosAgrupados) {
     const item = productosAgrupados[nombre];
-    const precioUnitario = item.precio || 0;
-    const precioTotal = precioUnitario * item.cantidad;
-    ticket += doble + `${item.cantidad} ${nombre.padEnd(25)} $${precioTotal.toFixed(2)}\n`;
+    ticket += normal + "cant   producto\n";
+    ticket += doble + `${item.cantidad} ${nombre}\n`;
     // Observación (si hay)
     if (item.observacion && item.observacion.trim() !== "") {
       ticket += negrita + tercero + `(${item.observacion.trim()})\n`;

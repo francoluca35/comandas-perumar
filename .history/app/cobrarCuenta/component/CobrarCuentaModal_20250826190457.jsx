@@ -441,7 +441,7 @@ export default function CobrarCuentaModal({
                 estado: "pendiente",
               });
 
-              // 3. NO sumar a caja aquí - se sumará automáticamente cuando se imprima el ticket
+              // 3. NO sumar a caja aquí - se sumará cuando se imprima el ticket
 
               // 4. Feedback visual
               Swal.fire({
