@@ -166,7 +166,7 @@ export default function CobrarCuentaModal({
 
   const confirmarPago = async () => {
     // Imprimir ticket de pago en impresora térmica
-    await fetch("/api/print-payment", {
+    await fetch("/api/printdelivery", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
