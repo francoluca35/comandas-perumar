@@ -70,16 +70,19 @@ function generarTicketCocina({
   // Imprimir productos agrupados
   for (const nombre in productosAgrupados) {
     const item = productosAgrupados[nombre];
-    ticket += normal + "cant   producto";
-    ticket += "\n";
-    ticket += doble + `${item.cantidad} ${nombre}\n`;
+    const precioUnitario = item.precio || 0;
+    const precioTotal = precioUnitario * item.cantidad;
+    
+    ticket += normal + "cant   producto                    precio\n";
+    ticket += doble + `${item.cantidad} ${nombre.padEnd(25)} $${precioTotal.toFixed(2)}\n`;
+    
     // Observación (si hay)
     if (item.observacion && item.observacion.trim() !== "") {
       ticket += negrita + tercero + `(${item.observacion.trim()})\n`;
     }
     // Adicionales (si hay)
     if (item.adicionales && item.adicionales.length > 0) {
-      ticket += normal + ` + ${item.adicionales.join(", ")}\n`;
+      ticket += normal + `   + ${item.adicionales.join(", ")}\n`;
     }
   }
   ticket += "\n\n";

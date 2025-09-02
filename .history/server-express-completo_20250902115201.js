@@ -179,7 +179,9 @@ function generarTicketPago({ mesa, productos, total, metodoPago, nombreCliente, 
   const orden = Math.floor(Math.random() * 1000000000000);
 
   let ticket = "";
-  ticket += doble + `     PERÚ MAR\n`;
+
+  ticket += doble + `    PERUMAR\n`;
+  ticket += doble + `RESTO CELINA CITY\n`;  
   ticket += "======================\n";
   ticket += normal;
   ticket += `MESA: ${mesa}\n`;
@@ -200,12 +202,16 @@ function generarTicketPago({ mesa, productos, total, metodoPago, nombreCliente, 
     return acc;
   }, {});
 
+  // Imprimir productos con precios individuales
   ticket += normal + "cant   producto                    precio\n";
   for (const nombre in productosAgrupados) {
     const item = productosAgrupados[nombre];
     const precioUnitario = item.precio || 0;
     const precioTotal = precioUnitario * item.cantidad;
+    
+    // Formato: "1 CEVICHE MIXTO INDIVIDUAL       $25000.00"
     ticket += doble + `${item.cantidad} ${nombre.padEnd(25)} $${precioTotal.toFixed(2)}\n`;
+    
     // Observación (si hay)
     if (item.observacion && item.observacion.trim() !== "") {
       ticket += negrita + tercero + `(${item.observacion.trim()})\n`;
@@ -239,10 +245,15 @@ function generarTicketPago({ mesa, productos, total, metodoPago, nombreCliente, 
   ticket += "======================\n";
   ticket += normal;
   ticket += "\n\n";
-  ticket += "   ¡GRACIAS POR SU VISITA!\n";
+  ticket += "   GRACIAS POR SU VISITA!\n";
+  ticket += "   Olavarria 2525, V. Celina\n";
+  ticket += "   Rivera 2495, V. Celina\n";
+  ticket += "   Telefono: 11 28665579\n";
+  ticket += "   Telefono: 11 22353820\n";
+  ticket += "\n\n";
   ticket += "==========================\n";
-  ticket += "olavarria 2525 V. Celina\n";
-  ticket += "Tel: 1128665579\n";
+  ticket += "==========================\n";
+  ticket += "==========================\n";
   ticket += cortar;
 
   return ticket;

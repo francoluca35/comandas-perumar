@@ -1,17 +1,16 @@
 const express = require("express");
 const cors = require("cors");
 const net = require("net");
-const config = require("./config-impresoras");
 
 const app = express();
-const PORT = config.PUERTO_LOCAL;
+const PORT = 4000;
 
 app.use(cors());
 app.use(express.json());
 
-const IP_COCINA = config.IP_COCINA;
-const IP_PARRILLA = config.IP_PARRILLA;
-const PUERTO = config.PUERTO;
+const IP_COCINA = "192.168.1.100";  // Cambiar por la IP real de tu impresora de cocina
+const IP_PARRILLA = "192.168.1.101"; // Cambiar por la IP real de tu impresora de parrilla
+const PUERTO = 9100; // Puerto estándar para impresoras térmicas
 
 // Función para enviar a impresora
 function imprimirTicket(ip, contenido) {
