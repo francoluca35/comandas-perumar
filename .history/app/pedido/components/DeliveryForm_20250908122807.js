@@ -182,6 +182,7 @@ export default function DeliveryForm() {
           categoria: item.categoria, // Agregar categoría para impresión
         }));
 
+        // Imprimir tickets de cocina/parrilla
         await fetch("/api/print/envios", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -193,6 +194,21 @@ export default function DeliveryForm() {
             total: pago === "link" ? totalMP : total,
             hora,
             fecha,
+            metodoPago: pago,
+            modo: "envio",
+          }),
+        });
+
+        // Imprimir ticket final para el cliente
+        await fetch("/api/print-final-delivery", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            nombre,
+            direccion,
+            observacion,
+            productos: productosParaImprimir,
+            total: pago === "link" ? totalMP : total,
             metodoPago: pago,
             modo: "envio",
           }),

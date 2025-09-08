@@ -6,12 +6,10 @@ import { FiPlusCircle, FiTrash2 } from "react-icons/fi";
 import Swal from "sweetalert2";
 import QRCode from "react-qr-code";
 
-export default function DeliveryForm() {
+export default function RestauranteForm() {
   const { productos } = useProductos();
 
   const [nombre, setNombre] = useState("");
-  const [direccion, setDireccion] = useState("");
-  const [observacion, setObservacion] = useState("");
   const [busqueda, setBusqueda] = useState("");
   const [productoSeleccionado, setProductoSeleccionado] = useState("");
   const [cantidad, setCantidad] = useState(1);
@@ -20,31 +18,34 @@ export default function DeliveryForm() {
   const [externalReference, setExternalReference] = useState("");
   const [presupuesto, setPresupuesto] = useState([]);
   const [mostrarDropdown, setMostrarDropdown] = useState(false);
+  const [esperandoPago, setEsperandoPago] = useState(false);
   const [comisionMP, setComisionMP] = useState(0);
-  const [observacionProducto, setObservacionProducto] = useState("");
-  const [total, setTotal] = useState(0);
   const [totalMP, setTotalMP] = useState(0);
 
-  // Calcular el total cada vez que cambia el presupuesto
-  useEffect(() => {
-    const t = presupuesto.reduce((total, item) => {
+  // Observación general del pedido (para el repartidor)
+  const [observacion, setObservacion] = useState("");
+  // Observación por producto (para ticket/cocina)
+  const [observacionProducto, setObservacionProducto] = useState("");
+
+  const productosFiltrados = productos.filter((p) =>
+    p.nombre.toLowerCase().includes(busqueda.toLowerCase())
+  );
+
+  const calcularTotal = () => {
+    return presupuesto.reduce((total, item) => {
       const comidaProd = productos.find((p) => p.nombre === item.comida);
       const bebidaProd = productos.find((p) => p.nombre === item.bebida);
       const base = (comidaProd?.precio || 0) * (item.cantidad || 1);
       const bebidaPrecio = (bebidaProd?.precio || 0) * (item.cantidad || 1);
       return total + base + bebidaPrecio;
     }, 0);
-    setTotal(t);
-  }, [presupuesto, productos]);
+  };
 
-  // Calcular el total + comision si es link
+  const total = calcularTotal();
+
   useEffect(() => {
     setTotalMP(Math.round((Number(total) + Number(comisionMP)) * 100) / 100);
   }, [total, comisionMP]);
-
-  const productosFiltrados = productos.filter((p) =>
-    p.nombre.toLowerCase().includes(busqueda.toLowerCase())
-  );
 
   const agregarProducto = () => {
     if (!productoSeleccionado || cantidad < 1) return;
@@ -56,7 +57,7 @@ export default function DeliveryForm() {
         comida: tipo !== "bebida" ? productoSeleccionado : "",
         bebida: tipo === "bebida" ? productoSeleccionado : "",
         cantidad,
-        observacion: observacionProducto,
+        observacion: observacionProducto, // Observación por producto
         categoria: producto?.categoria, // Agregar categoría del producto
       },
     ]);
@@ -70,77 +71,48 @@ export default function DeliveryForm() {
     setPresupuesto((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // Mercado Pago
-  const generarPagoDelivery = async () => {
-    try {
-      const res = await fetch("/api/mercado-pago/crear-pago-delivery", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          total: totalMP, // Incluye la comisión!
-          nombreCliente: nombre || "Cliente",
-        }),
-      });
+  // Adaptar QR para sumar la comision
+  const generarPagoQR = async () => {
+    const res = await fetch("/api/mercado-pago/crear-pago-qr", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        total: totalMP, // Incluye la comisión
+        nombreCliente: nombre || "Cliente",
+      }),
+    });
 
-      const data = await res.json();
+    const data = await res.json();
 
-      if (res.ok) {
-        setUrlPago(data.init_point);
-        setExternalReference(data.external_reference);
-      } else {
-        console.error("Error al generar el link:", data.error);
-      }
-    } catch (err) {
-      console.error("Error en generarPagoDelivery:", err);
+    if (res.ok) {
+      setUrlPago(data.init_point);
+      setExternalReference(data.external_reference);
+      setEsperandoPago(true);
+      esperarConfirmacionPago(data.external_reference);
+    } else {
+      Swal.fire("Error", "No se pudo generar el QR", "error");
     }
   };
 
-  useEffect(() => {
-    if (pago === "link" && total > 0) {
-      generarPagoDelivery();
-    }
-    // eslint-disable-next-line
-  }, [pago, totalMP]); // Usar totalMP para actualizar link si cambia comision
-
-  const esperarConfirmacionPago = () => {
+  const esperarConfirmacionPago = (ref) => {
     let intentos = 0;
     const interval = setInterval(async () => {
-      const res = await fetch(`/api/mercado-pago/estado/${externalReference}`);
+      const res = await fetch(`/api/mercado-pago/estado/${ref}`);
       const data = await res.json();
+
       if (data.status === "approved") {
         clearInterval(interval);
-        Swal.close();
+        setEsperandoPago(false);
         enviarPedidoFinal();
       }
+
       intentos++;
       if (intentos >= 24) {
         clearInterval(interval);
-        Swal.fire("Pago no confirmado", "Intenta nuevamente.", "error");
+        setEsperandoPago(false);
+        Swal.fire("Pago no confirmado", "Intenta nuevamente", "error");
       }
     }, 5000);
-  };
-
-  const enviarPedido = async () => {
-    if (!nombre || !direccion || presupuesto.length === 0 || !pago) {
-      Swal.fire("Completa todos los campos", "", "warning");
-      return;
-    }
-
-    if (pago === "efectivo") {
-      enviarPedidoFinal();
-    } else if (pago === "link") {
-      await generarPagoDelivery();
-      esperarConfirmacionPago();
-      Swal.fire({
-        title: "Esperando pago...",
-        html: "Por favor, espera mientras se confirma el pago.",
-        allowOutsideClick: false,
-        showConfirmButton: false,
-        didOpen: () => {
-          Swal.showLoading();
-        },
-      });
-    }
   };
 
   const enviarPedidoFinal = async () => {
@@ -152,16 +124,15 @@ export default function DeliveryForm() {
     const fecha = now.toLocaleDateString("es-AR");
 
     const payload = {
-      modoPedido: "delivery",
-      tipo: "delivery",
+      modoPedido: "restaurante",
+      tipo: "entregalocal",
       nombre,
-      direccion,
-      observacion,
+      observacion, // Observación general para el repartidor
       formaDePago: pago,
       comidas: presupuesto,
-      total: pago === "link" ? totalMP : total, // Si es link, suma comision
-      comision: pago === "link" ? comisionMP : 0,
-      modo: "envio",
+      total: pago === "qr" ? totalMP : total,
+      comision: pago === "qr" ? comisionMP : 0,
+      modo: "retiro",
       estado: "en curso",
       fecha: now.toLocaleString("es-AR"),
       timestamp: now,
@@ -178,23 +149,37 @@ export default function DeliveryForm() {
         const productosParaImprimir = presupuesto.map((item) => ({
           nombre: item.comida || item.bebida,
           cantidad: item.cantidad,
-          observacion: item.observacion,
+          observacion: item.observacion, // Para ticket/cocina
           categoria: item.categoria, // Agregar categoría para impresión
         }));
 
+        // Imprimir tickets de cocina/parrilla
         await fetch("/api/print/envios", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             nombre,
-            direccion,
-            observacion,
             productos: productosParaImprimir,
-            total: pago === "link" ? totalMP : total,
+            total: pago === "qr" ? totalMP : total,
             hora,
             fecha,
             metodoPago: pago,
-            modo: "envio",
+            modo: "retiro",
+          }),
+        });
+
+        // Imprimir ticket final para el cliente
+        await fetch("/api/print-final-delivery", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            nombre,
+            direccion: "", // Para llevar no tiene dirección
+            observacion,
+            productos: productosParaImprimir,
+            total: pago === "qr" ? totalMP : total,
+            metodoPago: pago,
+            modo: "retiro",
           }),
         });
 
@@ -211,8 +196,6 @@ export default function DeliveryForm() {
 
   const resetFormulario = () => {
     setNombre("");
-    setDireccion("");
-    setObservacion("");
     setBusqueda("");
     setProductoSeleccionado("");
     setCantidad(1);
@@ -220,14 +203,30 @@ export default function DeliveryForm() {
     setPresupuesto([]);
     setUrlPago("");
     setExternalReference("");
+    setEsperandoPago(false);
     setComisionMP(0);
+    setObservacion("");
+    setObservacionProducto("");
+  };
+
+  const manejarPedido = () => {
+    if (!nombre || presupuesto.length === 0 || !pago) {
+      Swal.fire("Completa todos los campos", "", "warning");
+      return;
+    }
+
+    if (pago === "efectivo") {
+      enviarPedidoFinal();
+    } else if (pago === "qr") {
+      generarPagoQR();
+    }
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl mx-auto">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-4xl mx-auto">
       {/* LADO IZQUIERDO */}
       <div className="flex flex-col gap-4 bg-black/20 p-6 rounded-xl">
-        {/* Bloque para agregar productos */}
+        {/* Productos */}
         <div className="flex flex-col gap-2">
           <input
             type="text"
@@ -265,14 +264,15 @@ export default function DeliveryForm() {
             onChange={(e) => setCantidad(Number(e.target.value))}
             className=" px-4 py-2 bg-white/10 text-white rounded-xl border border-white/20"
           />
-
+          {/* Observación por producto */}
           <input
             type="text"
-            placeholder="Observación (opcional)"
+            placeholder="Obs. para cocina (opcional)"
             value={observacionProducto}
             onChange={(e) => setObservacionProducto(e.target.value)}
             className=" px-4 py-2 bg-white/10 text-white rounded-xl border border-white/20"
           />
+
           <button
             onClick={agregarProducto}
             className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-xl mt-2"
@@ -320,26 +320,14 @@ export default function DeliveryForm() {
         <input
           value={nombre}
           onChange={(e) => setNombre(e.target.value)}
+          className="w-full px-4 py-3 bg-white/10 text-white rounded-xl border border-white/20"
           placeholder="Nombre del cliente"
-          className="w-full px-4 py-3 bg-white/10 text-white rounded-xl border border-white/20"
         />
-        <input
-          value={direccion}
-          onChange={(e) => setDireccion(e.target.value)}
-          placeholder="Dirección"
-          className="w-full px-4 py-3 bg-white/10 text-white rounded-xl border border-white/20"
-        />
-        <textarea
-          value={observacion}
-          onChange={(e) => setObservacion(e.target.value)}
-          rows={2}
-          placeholder="Observación (opcional)"
-          className="w-full px-4 py-3 bg-white/10 text-white rounded-xl border border-white/20"
-        />
+
         <select
           value={pago}
           onChange={(e) => setPago(e.target.value)}
-          className="w-full px-4 py-3 bg-white/10 text-white rounded-xl border border-white/20"
+          className="w-full px-4 py-3 mb-4 bg-white/10 text-white rounded-xl border border-white/20"
         >
           <option className="text-black" value="">
             Forma de pago
@@ -347,13 +335,14 @@ export default function DeliveryForm() {
           <option className="text-black" value="efectivo">
             Efectivo
           </option>
-          <option className="text-black" value="link">
-            Link de pago
+          <option className="text-black" value="qr">
+            Mercado Pago QR
           </option>
         </select>
 
-        {pago === "link" && (
-          <div className="my-4 text-center">
+        {/* Solo mostrar campo comisión si se elige QR */}
+        {pago === "qr" && (
+          <div className="mb-4 text-center">
             <label className="block text-gray-300 font-bold text-center mb-2">
               Agregar comisión Mercado Pago
             </label>
@@ -386,27 +375,16 @@ export default function DeliveryForm() {
                 Total a cobrar: ${totalMP.toFixed(2)}
               </span>
             </div>
-            {/* Mostrar link/QR solo si hay url */}
-            {urlPago && (
-              <>
-                <p className="text-sm text-white mb-2">Link generado:</p>
-                <a
-                  href={urlPago}
-                  target="_blank"
-                  className="block text-blue-300 underline mb-2 break-all"
-                >
-                  {urlPago}
-                </a>
-                <a
-                  href={`https://wa.me/?text=${encodeURIComponent(
-                    `Hola! Este es el link para pagar tu pedido: ${urlPago}`
-                  )}`}
-                  target="_blank"
-                  className="inline-block bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-xl"
-                >
-                  Enviar por WhatsApp
-                </a>
-              </>
+          </div>
+        )}
+
+        {pago === "qr" && urlPago && (
+          <div className="flex flex-col items-center gap-2 mb-4">
+            <QRCode value={urlPago} size={200} />
+            {esperandoPago && (
+              <p className="text-sm text-white mt-2">
+                Esperando confirmación de pago...
+              </p>
             )}
           </div>
         )}
@@ -416,7 +394,7 @@ export default function DeliveryForm() {
         </p>
 
         <button
-          onClick={enviarPedido}
+          onClick={manejarPedido}
           className="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 rounded-xl"
         >
           Hacer Pedido

@@ -178,8 +178,6 @@ export default function DeliveryForm() {
         const productosParaImprimir = presupuesto.map((item) => ({
           nombre: item.comida || item.bebida,
           cantidad: item.cantidad,
-          observacion: item.observacion,
-          categoria: item.categoria, // Agregar categoría para impresión
         }));
 
         await fetch("/api/print/envios", {

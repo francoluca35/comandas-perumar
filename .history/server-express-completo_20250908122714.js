@@ -499,48 +499,6 @@ app.post("/print-delivery", async (req, res) => {
   }
 });
 
-// 🧾 Ruta para imprimir ticket final de delivery/para llevar
-app.post("/print-final-delivery", async (req, res) => {
-  try {
-    const { nombre, direccion, productos, total, modo, observacion, metodoPago } = req.body;
-    
-    console.log("🔍 DEBUG - Ticket final delivery:", { 
-      nombre, 
-      direccion, 
-      modo, 
-      total, 
-      metodoPago,
-      productosCount: productos.length 
-    });
-
-    // Generar el ticket final
-    const contenido = generarTicketFinalDelivery({
-      nombre,
-      direccion,
-      productos,
-      total,
-      modo,
-      observacion,
-      metodoPago,
-    });
-    
-    // Imprimir en la impresora de cocina (IP_COCINA)
-    console.log("📄 Enviando ticket final a COCINA:", IP_COCINA);
-    const resultado = await imprimirTicket(IP_COCINA, contenido);
-    
-    console.log("✅ Ticket final impreso:", resultado);
-
-    res.json({
-      success: true,
-      message: "Ticket final impreso correctamente",
-      result: resultado,
-    });
-  } catch (err) {
-    console.error("❌ Error en print-final-delivery:", err);
-    res.status(500).json({ error: "Error al imprimir ticket final", message: err.message });
-  }
-});
-
 
 app.listen(PORT, () => {
   console.log(

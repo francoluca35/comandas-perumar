@@ -251,159 +251,44 @@ ticket += "==========================\n";
   return ticket;
 }
 
-// 🧾 Generador de ticket final para delivery/para llevar
-function generarTicketFinalDelivery({ nombre, direccion, productos, total, modo, observacion, metodoPago }) {
-  const doble = "\x1D\x21\x11";
-  const normal = "\x1D\x21\x00";
-  const cortar = "\x1D\x56\x00";
-  const tercero = "\x1D\x21\x01";
-  const negrita = "\x1B\x45\x01";
-
-  const ahora = new Date();
-  const hora = ahora.toLocaleTimeString("es-AR", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-  const fecha = ahora.toLocaleDateString("es-AR");
-  const orden = Math.floor(Math.random() * 1000000000000);
-  const encabezado = modo === "retiro" ? "PARA LLEVAR" : "DELIVERY";
-
-  let ticket = "";
-  ticket += doble + `    PERUMAR\n`;
-  ticket += doble + `RESTO CELINA CITY\n`;
-  ticket += "======================\n";
-  ticket += doble + `     ${encabezado}\n`;
-  ticket += "======================\n";
-  ticket += normal;
-  ticket += `Cliente: ${nombre}\n`;
-  if (direccion) ticket += `Direccion: ${direccion}\n`;
-  ticket += `ORDEN: ${orden}\n`;
-  ticket += `HORA: ${hora}\n`;
-  ticket += `FECHA: ${fecha}\n`;
-  ticket += doble + "======================\n";
-
-  // Agrupar productos
-  const productosAgrupados = productos.reduce((acc, p) => {
-    const nombre = p.nombre.toUpperCase();
-    if (!acc[nombre]) {
-      acc[nombre] = { ...p, cantidad: p.cantidad || 1 };
-    } else {
-      acc[nombre].cantidad += p.cantidad || 1;
-    }
-    return acc;
-  }, {});
-
-  ticket += normal + "cant   producto\n";
-  for (const nombre in productosAgrupados) {
-    const item = productosAgrupados[nombre];
-    ticket += doble + `${item.cantidad} ${nombre}\n`;
-    // Observación (si hay)
-    if (item.observacion && item.observacion.trim() !== "") {
-      ticket += negrita + tercero + `(${item.observacion.trim()})\n`;
-    }
-    // Adicionales (si hay)
-    if (item.adicionales && item.adicionales.length > 0) {
-      ticket += normal + `   + ${item.adicionales.join(", ")}\n`;
-    }
-  }  
-  
-  // Observación general del pedido
-  if (observacion && observacion.trim() !== "") {
-    ticket += "\n";
-    ticket += doble + "OBSERVACIÓN GENERAL:\n";
-    ticket += normal + `${observacion.trim()}\n`;
-  }
-  
-  ticket += "\n";
-  ticket += doble + "======================\n";
-  ticket += normal + `TOTAL: $${total.toFixed(2)}\n`;
-  ticket += `Método: ${metodoPago}\n`;
-  ticket += doble + "======================\n";
-  ticket += normal;
-  ticket += "\n\n";
-  ticket += "   GRACIAS POR SU VISITA!\n";
-  ticket += "   Olavarria 2525, V. Celina\n";
-  ticket += "   Rivera 2495, V. Celina\n";
-  ticket += "   Telefono: 11 28665579\n";
-  ticket += "   Telefono: 11 22353820\n";
-  ticket += "\n";
-  ticket += "==========================\n";
-  ticket += "==========================\n";
-  ticket += "==========================\n";
-  ticket += cortar;
-
-  return ticket;
-}
-
 // 📦 Ruta para pedidos restaurante
 app.post("/print", async (req, res) => {
   try {
     const { mesa, productos, orden, hora, fecha, metodoPago, modo } = req.body;
-    
-    console.log("🔍 DEBUG - Productos recibidos:", productos.map(p => ({ 
-      nombre: p.nombre, 
-      categoria: p.categoria,
-      categoriaLower: p.categoria?.toLowerCase(),
-      esBrasas: p.categoria?.toLowerCase() === "brasas"
-    })));
-    
-    // Verificar si hay productos brasas
-    const tieneBrasas = productos.some(
+    const parrilla = productos.filter(
       (p) => p.categoria?.toLowerCase() === "brasas"
     );
-    
-    console.log("🔍 DEBUG - ¿Tiene brasas?", tieneBrasas);
-    console.log("🔍 DEBUG - Productos que son brasas:", productos.filter(p => p.categoria?.toLowerCase() === "brasas").map(p => p.nombre));
+    const cocina = productos.filter(
+      (p) => p.categoria?.toLowerCase() !== "brasas"
+    );
 
     const tareas = [];
 
-    if (tieneBrasas) {
-      console.log("🔥 IMPRIMIENDO BRASAS: 1 ticket en cocina + 1 ticket en parrilla");
-      
-      // Si el pedido tiene productos BRASAS: imprimir 1 ticket en cocina y 1 en parrilla
+    if (parrilla.length > 0) {
       const contenido = generarTicketCocina({
         mesa,
-        productos,
+        productos: parrilla,
         orden,
         hora,
         fecha,
         metodoPago,
       });
-      
-      // 1 ticket en cocina (192.168.1.100)
-      console.log("📄 Enviando ticket a COCINA:", IP_COCINA);
-      tareas.push(imprimirTicket(IP_COCINA, contenido));
-      
-      // 1 ticket en parrilla (192.168.1.101)
-      console.log("📄 Enviando ticket a PARRILLA:", IP_PARRILLA);
       tareas.push(imprimirTicket(IP_PARRILLA, contenido));
-    } else {
-      console.log("🍽️ IMPRIMIENDO NO-BRASAS: 2 tickets iguales en cocina");
-      
-      // Si NO es brasas: imprimir 2 tickets iguales en cocina (192.168.1.100)
+    }
+
+    if (cocina.length > 0) {
       const contenido = generarTicketCocina({
         mesa,
-        productos,
+        productos: cocina,
         orden,
         hora,
         fecha,
         metodoPago,
       });
-      
-      // 2 tickets iguales en cocina
-      console.log("📄 Enviando ticket 1 a COCINA:", IP_COCINA);
-      tareas.push(imprimirTicket(IP_COCINA, contenido));
-      console.log("📄 Enviando ticket 2 a COCINA:", IP_COCINA);
       tareas.push(imprimirTicket(IP_COCINA, contenido));
     }
 
-    console.log("📋 Total de tareas de impresión:", tareas.length);
-
     const resultados = await Promise.allSettled(tareas);
-
-    console.log("✅ Resultados de impresión:", resultados.map((r, i) => 
-      r.status === "fulfilled" ? `Tarea ${i+1}: ${r.value}` : `Tarea ${i+1}: ${r.reason}`
-    ));
 
     res.json({
       success: true,
@@ -412,7 +297,6 @@ app.post("/print", async (req, res) => {
       ),
     });
   } catch (err) {
-    console.error("❌ Error en print:", err);
     res.status(500).json({ error: "Error al imprimir", message: err.message });
   }
 });
@@ -421,12 +305,7 @@ app.post("/print-delivery", async (req, res) => {
   try {
     const { nombre, direccion, productos, total, modo, observacion } = req.body;
 
-    console.log("🔍 DEBUG - Productos recibidos:", productos.map(p => ({ 
-      nombre: p.nombre, 
-      categoria: p.categoria,
-      categoriaLower: p.categoria?.toLowerCase(),
-      esBrasas: p.categoria?.toLowerCase() === "brasas"
-    })));
+    console.log("🔍 DEBUG - Productos recibidos:", productos.map(p => ({ nombre: p.nombre, categoria: p.categoria })));
 
     // Verificar si hay productos brasas
     const tieneBrasas = productos.some(
@@ -434,7 +313,6 @@ app.post("/print-delivery", async (req, res) => {
     );
 
     console.log("🔍 DEBUG - ¿Tiene brasas?", tieneBrasas);
-    console.log("🔍 DEBUG - Productos que son brasas:", productos.filter(p => p.categoria?.toLowerCase() === "brasas").map(p => p.nombre));
 
     // Crear tareas de impresión
     const tareas = [];
@@ -496,48 +374,6 @@ app.post("/print-delivery", async (req, res) => {
   } catch (err) {
     console.error("❌ Error en print-delivery:", err);
     res.status(500).json({ error: "Error en impresión", message: err.message });
-  }
-});
-
-// 🧾 Ruta para imprimir ticket final de delivery/para llevar
-app.post("/print-final-delivery", async (req, res) => {
-  try {
-    const { nombre, direccion, productos, total, modo, observacion, metodoPago } = req.body;
-    
-    console.log("🔍 DEBUG - Ticket final delivery:", { 
-      nombre, 
-      direccion, 
-      modo, 
-      total, 
-      metodoPago,
-      productosCount: productos.length 
-    });
-
-    // Generar el ticket final
-    const contenido = generarTicketFinalDelivery({
-      nombre,
-      direccion,
-      productos,
-      total,
-      modo,
-      observacion,
-      metodoPago,
-    });
-    
-    // Imprimir en la impresora de cocina (IP_COCINA)
-    console.log("📄 Enviando ticket final a COCINA:", IP_COCINA);
-    const resultado = await imprimirTicket(IP_COCINA, contenido);
-    
-    console.log("✅ Ticket final impreso:", resultado);
-
-    res.json({
-      success: true,
-      message: "Ticket final impreso correctamente",
-      result: resultado,
-    });
-  } catch (err) {
-    console.error("❌ Error en print-final-delivery:", err);
-    res.status(500).json({ error: "Error al imprimir ticket final", message: err.message });
   }
 });
 
