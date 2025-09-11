@@ -35,7 +35,6 @@ function generarTicketCocina({
   hora,
   fecha,
   metodoPago,
-  incluirTotal = true,
 }) {
   const doble = "\x1D\x21\x11";
   const tercero = "\x1D\x21\x01";
@@ -72,7 +71,7 @@ function generarTicketCocina({
     const item = productosAgrupados[nombre];
     ticket += normal + "cant   producto";
     ticket += "\n";
-    ticket += tercero + `${item.cantidad} ${nombre}\n`;
+    ticket += doble + `${item.cantidad} ${nombre}\n`;
     // Observación (si hay)
     if (item.observacion && item.observacion.trim() !== "") {
       ticket += negrita + tercero + `(${item.observacion.trim()})\n`;
@@ -82,17 +81,6 @@ function generarTicketCocina({
       ticket += normal + ` + ${item.adicionales.join(", ")}\n`;
     }
   }
-  
-  // Incluir total solo si se solicita
-  if (incluirTotal) {
-    const total = productos.reduce((acc, p) => acc + (p.precio * (p.cantidad || 1)), 0);
-    ticket += "\n";
-    ticket += doble + "======================\n";
-    ticket += normal + `TOTAL: $${total.toFixed(2)}\n`;
-    ticket += `Método: ${metodoPago}\n`;
-    ticket += "======================\n";
-  }
-  
   ticket += "\n\n";
   ticket += "  ==========================\n";
   ticket += "\n\n\n" + cortar;
@@ -142,7 +130,7 @@ function generarTicketDelivery({ nombre, direccion, productos, total, modo, obse
   ticket += normal + "cant   producto\n";
   for (const nombre in productosAgrupados) {
     const item = productosAgrupados[nombre];
-    ticket += tercero + `${item.cantidad} ${nombre}\n`;
+    ticket += doble + `${item.cantidad} ${nombre}\n`;
     // Observación (si hay)
     if (item.observacion && item.observacion.trim() !== "") {
       ticket += negrita + tercero + `(${item.observacion.trim()})\n`;
@@ -161,15 +149,8 @@ function generarTicketDelivery({ nombre, direccion, productos, total, modo, obse
   }
   
   ticket += "\n\n";
-  
-  // Solo mostrar total si es mayor que 0
-  if (total > 0) {
-    ticket += `TOTAL:  $${total} \n`;
-    ticket += doble + "======================\n";
-  } else {
-    ticket += "  ==========================\n";
-  }
-  
+  ticket += `TOTAL:  $${total} \n`;
+  ticket += doble + "======================\n";
   ticket += normal;
   ticket += "\n\n\n";
   ticket += "==========================\n";
@@ -222,7 +203,7 @@ ticket += "======================\n";
   for (const nombre in productosAgrupados) {
     const item = productosAgrupados[nombre];
     const precioUnitario = item.precio || 0;
-    ticket += tercero + `${item.cantidad} ${nombre} $${precioUnitario.toFixed(2)}\n`;
+    ticket += doble + `${item.cantidad} ${nombre} $${precioUnitario.toFixed(2)}\n`;
     // Observación (si hay)
     if (item.observacion && item.observacion.trim() !== "") {
       ticket += negrita + tercero + `(${item.observacion.trim()})\n`;
@@ -315,7 +296,7 @@ function generarTicketFinalDelivery({ nombre, direccion, productos, total, modo,
   ticket += normal + "cant   producto\n";
   for (const nombre in productosAgrupados) {
     const item = productosAgrupados[nombre];
-    ticket += tercero + `${item.cantidad} ${nombre}\n`;
+    ticket += doble + `${item.cantidad} ${nombre}\n`;
     // Observación (si hay)
     if (item.observacion && item.observacion.trim() !== "") {
       ticket += negrita + tercero + `(${item.observacion.trim()})\n`;
@@ -388,9 +369,9 @@ app.post("/print", async (req, res) => {
     console.log("🔍 DEBUG - Productos no brasas:", productosNoBrasas.map(p => p.nombre));
 
     if (productosBrasas.length > 0) {
-      console.log("🔥 IMPRIMIENDO PEDIDO MIXTO: brasas en parrilla + no-brasas en cocina + completo con total en cocina");
+      console.log("🔥 IMPRIMIENDO PEDIDO MIXTO: brasas en parrilla + todo en cocina");
       
-      // 1. Ticket solo de brasas en PARRILLA (sin total)
+      // 1. Ticket solo de brasas en PARRILLA
       const contenidoParrilla = generarTicketCocina({
         mesa,
         productos: productosBrasas,
@@ -398,38 +379,21 @@ app.post("/print", async (req, res) => {
         hora,
         fecha,
         metodoPago,
-        incluirTotal: false,
       });
       console.log("📄 Enviando ticket BRASAS a PARRILLA:", IP_PARRILLA);
       tareas.push(imprimirTicket(IP_PARRILLA, contenidoParrilla));
       
-      // 2. Ticket solo de no-brasas en COCINA (sin total)
-      if (productosNoBrasas.length > 0) {
-        const contenidoNoBrasas = generarTicketCocina({
-          mesa,
-          productos: productosNoBrasas,
-          orden,
-          hora,
-          fecha,
-          metodoPago,
-          incluirTotal: false,
-        });
-        console.log("📄 Enviando ticket NO-BRASAS a COCINA:", IP_COCINA);
-        tareas.push(imprimirTicket(IP_COCINA, contenidoNoBrasas));
-      }
-      
-      // 3. Ticket completo (brasas + no brasas) con total en COCINA
-      const contenidoCompleto = generarTicketCocina({
+      // 2. Ticket completo (brasas + no brasas) en COCINA
+      const contenidoCocina = generarTicketCocina({
         mesa,
         productos, // TODOS los productos
         orden,
         hora,
         fecha,
         metodoPago,
-        incluirTotal: true,
       });
-      console.log("📄 Enviando ticket COMPLETO CON TOTAL a COCINA:", IP_COCINA);
-      tareas.push(imprimirTicket(IP_COCINA, contenidoCompleto));
+      console.log("📄 Enviando ticket COMPLETO a COCINA:", IP_COCINA);
+      tareas.push(imprimirTicket(IP_COCINA, contenidoCocina));
     } else {
       console.log("🍽️ IMPRIMIENDO SOLO NO-BRASAS: 2 tickets iguales en cocina");
       
@@ -496,45 +460,31 @@ app.post("/print-delivery", async (req, res) => {
     const tareas = [];
 
     if (productosBrasas.length > 0) {
-      console.log("🔥 IMPRIMIENDO PEDIDO MIXTO DELIVERY: brasas en parrilla + no-brasas en cocina + completo con total en cocina");
+      console.log("🔥 IMPRIMIENDO PEDIDO MIXTO: brasas en parrilla + todo en cocina");
       
-      // 1. Ticket solo de brasas en PARRILLA (sin total)
+      // 1. Ticket solo de brasas en PARRILLA
       const contenidoParrilla = generarTicketDelivery({
         nombre,
         direccion,
         productos: productosBrasas,
-        total: 0, // Sin total para parrilla
+        total,
         modo,
         observacion,
       });
       console.log("📄 Enviando ticket BRASAS a PARRILLA:", IP_PARRILLA);
       tareas.push(imprimirTicket(IP_PARRILLA, contenidoParrilla));
       
-      // 2. Ticket solo de no-brasas en COCINA (sin total)
-      if (productosNoBrasas.length > 0) {
-        const contenidoNoBrasas = generarTicketDelivery({
-          nombre,
-          direccion,
-          productos: productosNoBrasas,
-          total: 0, // Sin total para cocina
-          modo,
-          observacion,
-        });
-        console.log("📄 Enviando ticket NO-BRASAS a COCINA:", IP_COCINA);
-        tareas.push(imprimirTicket(IP_COCINA, contenidoNoBrasas));
-      }
-      
-      // 3. Ticket completo (brasas + no brasas) con total en COCINA
-      const contenidoCompleto = generarTicketDelivery({
+      // 2. Ticket completo (brasas + no brasas) en COCINA
+      const contenidoCocina = generarTicketDelivery({
         nombre,
         direccion,
         productos, // TODOS los productos
-        total, // Con total para el ticket completo
+        total,
         modo,
         observacion,
       });
-      console.log("📄 Enviando ticket COMPLETO CON TOTAL a COCINA:", IP_COCINA);
-      tareas.push(imprimirTicket(IP_COCINA, contenidoCompleto));
+      console.log("📄 Enviando ticket COMPLETO a COCINA:", IP_COCINA);
+      tareas.push(imprimirTicket(IP_COCINA, contenidoCocina));
     } else {
       console.log("🍽️ IMPRIMIENDO SOLO NO-BRASAS: 2 tickets iguales en cocina");
       

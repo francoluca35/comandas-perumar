@@ -72,7 +72,7 @@ function generarTicketCocina({
     const item = productosAgrupados[nombre];
     ticket += normal + "cant   producto";
     ticket += "\n";
-    ticket += tercero + `${item.cantidad} ${nombre}\n`;
+    ticket += doble + `${item.cantidad} ${nombre}\n`;
     // Observación (si hay)
     if (item.observacion && item.observacion.trim() !== "") {
       ticket += negrita + tercero + `(${item.observacion.trim()})\n`;
@@ -142,7 +142,7 @@ function generarTicketDelivery({ nombre, direccion, productos, total, modo, obse
   ticket += normal + "cant   producto\n";
   for (const nombre in productosAgrupados) {
     const item = productosAgrupados[nombre];
-    ticket += tercero + `${item.cantidad} ${nombre}\n`;
+    ticket += doble + `${item.cantidad} ${nombre}\n`;
     // Observación (si hay)
     if (item.observacion && item.observacion.trim() !== "") {
       ticket += negrita + tercero + `(${item.observacion.trim()})\n`;
@@ -222,7 +222,7 @@ ticket += "======================\n";
   for (const nombre in productosAgrupados) {
     const item = productosAgrupados[nombre];
     const precioUnitario = item.precio || 0;
-    ticket += tercero + `${item.cantidad} ${nombre} $${precioUnitario.toFixed(2)}\n`;
+    ticket += doble + `${item.cantidad} ${nombre} $${precioUnitario.toFixed(2)}\n`;
     // Observación (si hay)
     if (item.observacion && item.observacion.trim() !== "") {
       ticket += negrita + tercero + `(${item.observacion.trim()})\n`;
@@ -315,7 +315,7 @@ function generarTicketFinalDelivery({ nombre, direccion, productos, total, modo,
   ticket += normal + "cant   producto\n";
   for (const nombre in productosAgrupados) {
     const item = productosAgrupados[nombre];
-    ticket += tercero + `${item.cantidad} ${nombre}\n`;
+    ticket += doble + `${item.cantidad} ${nombre}\n`;
     // Observación (si hay)
     if (item.observacion && item.observacion.trim() !== "") {
       ticket += negrita + tercero + `(${item.observacion.trim()})\n`;
