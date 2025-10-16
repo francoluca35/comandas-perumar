@@ -139,6 +139,7 @@ export default function SelectorProductos({ productos, onSelect, onClose }) {
               "pescados y mariscos",
               "menu diario",
               "extras",
+              "pastas",
             ].map((cat) => (
               <button
                 key={cat}

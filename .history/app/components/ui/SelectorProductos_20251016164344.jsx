@@ -8,6 +8,7 @@ export default function SelectorProductos({ productos, onSelect, onClose }) {
   const [filtro, setFiltro] = useState("comida");
   const [subfiltro, setSubfiltro] = useState(null);
   const [subfiltroBebida, setSubfiltroBebida] = useState(null);
+  const [observacion, setObservacion] = useState(""); // <--- NUEVO
 
   const productosFiltrados = productos.filter((p) => {
     if (filtro === "todos") return true;
@@ -57,12 +58,26 @@ export default function SelectorProductos({ productos, onSelect, onClose }) {
             className="w-full px-3 py-2 rounded bg-white/10 text-white text-center"
           />
 
+          {/* Campo observación */}
+          <label className="block mt-4 mb-2 text-sm font-medium">
+            Observación <span className="text-gray-400">(opcional)</span>
+          </label>
+          <textarea
+            value={observacion}
+            onChange={(e) => setObservacion(e.target.value)}
+            rows={2}
+            placeholder="Ej: Sin cebolla, bien cocido, etc."
+            className="w-full px-3 py-2 rounded bg-white/10 text-white"
+          />
+
           <button
             onClick={() => {
               onSelect({
                 ...productoSeleccionado,
                 cantidad: cantidadSeleccionada,
+                observacion: observacion.trim() || "",
               });
+              setObservacion(""); // Limpiar observación para el siguiente
               onClose();
             }}
             className="mt-4 w-full bg-green-600 hover:bg-green-700 py-2 rounded font-bold"
@@ -124,6 +139,7 @@ export default function SelectorProductos({ productos, onSelect, onClose }) {
               "pescados y mariscos",
               "menu diario",
               "extras",
+              "pastas",
             ].map((cat) => (
               <button
                 key={cat}
@@ -193,6 +209,7 @@ export default function SelectorProductos({ productos, onSelect, onClose }) {
               onClick={() => {
                 setProductoSeleccionado(p);
                 setCantidadSeleccionada(1);
+                setObservacion(""); // Limpiar observación cuando cambia de producto
               }}
             >
               <img

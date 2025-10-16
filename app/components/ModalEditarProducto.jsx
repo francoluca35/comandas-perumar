@@ -168,6 +168,9 @@ export default function ModalEditarProducto({ producto, onClose, refetch }) {
                 <option value="pescados y mariscos">
                   🐟 Pescados y Mariscos
                 </option>
+                <option value="menu diario">🍽️ Menu diario</option>
+                <option value="extras">🧀 Extras</option>
+                <option value="pastas">🍝 Pastas</option>
               </select>
 
               <div className="flex gap-2">

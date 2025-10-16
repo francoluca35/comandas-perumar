@@ -7,13 +7,22 @@ export default function SelectorProductos({ productos, onSelect, onClose }) {
   const [cantidadSeleccionada, setCantidadSeleccionada] = useState(1);
   const [filtro, setFiltro] = useState("comida");
   const [subfiltro, setSubfiltro] = useState(null);
+  const [subfiltroBebida, setSubfiltroBebida] = useState(null);
+  const [observacion, setObservacion] = useState(""); // <--- NUEVO
 
   const productosFiltrados = productos.filter((p) => {
     if (filtro === "todos") return true;
+
     if (filtro === "comida") {
       if (!subfiltro) return p.tipo === "comida";
       return p.tipo === "comida" && p.categoria === subfiltro;
     }
+
+    if (filtro === "bebida") {
+      if (subfiltroBebida === null) return p.tipo === "bebida";
+      return p.tipo === "bebida" && p.alcohol === (subfiltroBebida === "con");
+    }
+
     return p.tipo === filtro;
   });
 
@@ -49,12 +58,26 @@ export default function SelectorProductos({ productos, onSelect, onClose }) {
             className="w-full px-3 py-2 rounded bg-white/10 text-white text-center"
           />
 
+          {/* Campo observación */}
+          <label className="block mt-4 mb-2 text-sm font-medium">
+            Observación <span className="text-gray-400">(opcional)</span>
+          </label>
+          <textarea
+            value={observacion}
+            onChange={(e) => setObservacion(e.target.value)}
+            rows={2}
+            placeholder="Ej: Sin cebolla, bien cocido, etc."
+            className="w-full px-3 py-2 rounded bg-white/10 text-white"
+          />
+
           <button
             onClick={() => {
               onSelect({
                 ...productoSeleccionado,
                 cantidad: cantidadSeleccionada,
+                observacion: observacion.trim() || "",
               });
+              setObservacion(""); // Limpiar observación para el siguiente
               onClose();
             }}
             className="mt-4 w-full bg-green-600 hover:bg-green-700 py-2 rounded font-bold"
@@ -110,26 +133,66 @@ export default function SelectorProductos({ productos, onSelect, onClose }) {
         {/* Subfiltros solo si es comida */}
         {filtro === "comida" && (
           <div className="flex justify-center gap-3 mb-6 flex-wrap">
-            {["brasas", "salteados y criollos", "pescados y mariscos"].map(
-              (cat) => (
-                <button
-                  key={cat}
-                  onClick={() => setSubfiltro(cat)}
-                  className={`px-3 py-1 rounded-full border text-sm ${
-                    subfiltro === cat
-                      ? "bg-orange-400 text-white font-semibold"
-                      : "bg-white/10 hover:bg-white/20"
-                  }`}
-                >
-                  {cat}
-                </button>
-              )
-            )}
+            {[
+              "brasas",
+              "salteados y criollos",
+              "pescados y mariscos",
+              "menu diario",
+              "extras",
+              "pastas",
+            ].map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setSubfiltro(cat)}
+                className={`px-3 py-1 rounded-full border text-sm ${
+                  subfiltro === cat
+                    ? "bg-orange-400 text-white font-semibold"
+                    : "bg-white/10 hover:bg-white/20"
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
             <button
               onClick={() => setSubfiltro(null)}
               className={`px-3 py-1 rounded-full text-sm ${
                 subfiltro === null
                   ? "bg-orange-400 text-white font-semibold"
+                  : "bg-white/10 hover:bg-white/20"
+              }`}
+            >
+              Todas
+            </button>
+          </div>
+        )}
+        {/* Subfiltros solo si es bebida */}
+        {filtro === "bebida" && (
+          <div className="flex justify-center gap-3 mb-6 flex-wrap">
+            <button
+              onClick={() => setSubfiltroBebida("con")}
+              className={`px-3 py-1 rounded-full text-sm ${
+                subfiltroBebida === "con"
+                  ? "bg-blue-500 text-white font-semibold"
+                  : "bg-white/10 hover:bg-white/20"
+              }`}
+            >
+              Con alcohol
+            </button>
+            <button
+              onClick={() => setSubfiltroBebida("sin")}
+              className={`px-3 py-1 rounded-full text-sm ${
+                subfiltroBebida === "sin"
+                  ? "bg-blue-500 text-white font-semibold"
+                  : "bg-white/10 hover:bg-white/20"
+              }`}
+            >
+              Sin alcohol
+            </button>
+            <button
+              onClick={() => setSubfiltroBebida(null)}
+              className={`px-3 py-1 rounded-full text-sm ${
+                subfiltroBebida === null
+                  ? "bg-blue-500 text-white font-semibold"
                   : "bg-white/10 hover:bg-white/20"
               }`}
             >
@@ -146,6 +209,7 @@ export default function SelectorProductos({ productos, onSelect, onClose }) {
               onClick={() => {
                 setProductoSeleccionado(p);
                 setCantidadSeleccionada(1);
+                setObservacion(""); // Limpiar observación cuando cambia de producto
               }}
             >
               <img

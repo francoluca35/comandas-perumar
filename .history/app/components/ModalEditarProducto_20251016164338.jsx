@@ -8,10 +8,23 @@ export default function ModalEditarProducto({ producto, onClose, refetch }) {
   const [precio, setPrecio] = useState(producto.precio);
   const [precioConIVA, setPrecioConIVA] = useState(producto.precioConIVA);
   const [descuento, setDescuento] = useState(producto.descuento || "");
+  const [tipo, setTipo] = useState(producto.tipo);
+  const [categoria, setCategoria] = useState(producto.categoria || "brasas");
+  const [alcohol, setAlcohol] = useState(producto.alcohol || false);
   const [adicional, setAdicional] = useState("");
   const [adicionales, setAdicionales] = useState(producto.adicionales || []);
-  const [tipo] = useState(producto.tipo);
   const [imagen, setImagen] = useState(null);
+
+  const handleTipoChange = (e) => {
+    const nuevoTipo = e.target.value;
+    setTipo(nuevoTipo);
+    if (nuevoTipo === "bebida") {
+      setCategoria("");
+      setAdicionales([]);
+    } else {
+      setAlcohol(false);
+    }
+  };
 
   const agregarAdicional = () => {
     if (adicional.trim()) {
@@ -46,31 +59,35 @@ export default function ModalEditarProducto({ producto, onClose, refetch }) {
       formData.append("precioConIVA", precioConIVA);
       formData.append("descuento", descuento);
       if (imagen) formData.append("imagen", imagen);
+
       if (tipo === "comida") {
         formData.append("adicionales", JSON.stringify(adicionales));
+        formData.append("categoria", categoria);
+      }
+
+      if (tipo === "bebida") {
+        formData.append("alcohol", alcohol);
       }
 
       const res = await fetch("/api/menu/editar", {
-        method: "POST",
+        method: "PUT",
         body: formData,
       });
 
       const data = await res.json();
       if (res.ok) {
-        Swal.fire({
-          icon: "success",
-          title: "Producto actualizado",
-          text: "Los cambios fueron guardados correctamente.",
-        }).then(() => {
-          refetch();
-          onClose();
-        });
+        Swal.fire("Actualizado", "Producto guardado con éxito", "success").then(
+          () => {
+            refetch();
+            onClose();
+          }
+        );
       } else {
-        Swal.fire("Error", data.message || "Error al actualizar", "error");
+        Swal.fire("Error", data.message || "No se pudo actualizar", "error");
       }
     } catch (err) {
       console.error(err);
-      Swal.fire("Error", "Error al actualizar el producto", "error");
+      Swal.fire("Error", "Hubo un problema al guardar", "error");
     }
   };
 
@@ -98,6 +115,15 @@ export default function ModalEditarProducto({ producto, onClose, refetch }) {
             onChange={(e) => setImagen(e.target.files[0])}
             className="w-full text-sm bg-white file:bg-green-600 file:text-white file:rounded file:px-4 file:py-1 border border-gray-300 rounded-lg"
           />
+
+          <select
+            value={tipo}
+            onChange={handleTipoChange}
+            className="w-full px-4 py-2 border rounded-lg bg-gray-100"
+          >
+            <option value="comida">🍽 Comida</option>
+            <option value="bebida">🥤 Bebida</option>
+          </select>
 
           <input
             type="text"
@@ -127,46 +153,84 @@ export default function ModalEditarProducto({ producto, onClose, refetch }) {
             className="w-full px-4 py-2 border rounded-lg bg-gray-100"
             placeholder="Descuento (opcional)"
           />
-        </div>
 
-        {tipo === "comida" && (
-          <div className="mt-4">
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={adicional}
-                onChange={(e) => setAdicional(e.target.value)}
+          {tipo === "comida" && (
+            <>
+              <select
+                value={categoria}
+                onChange={(e) => setCategoria(e.target.value)}
                 className="w-full px-4 py-2 border rounded-lg bg-gray-100"
-                placeholder="Agregar adicional"
-              />
-              <button
-                onClick={agregarAdicional}
-                className="bg-green-600 text-white px-4 rounded-lg"
               >
-                +
-              </button>
-            </div>
+                <option value="brasas">🔥 Brasas</option>
+                <option value="salteados y criollos">
+                  🍲 Salteados y Criollos
+                </option>
+                <option value="pescados y mariscos">
+                  🐟 Pescados y Mariscos
+                </option>
+                <option value="menu diario">🍽️ Menu diario</option>
+                <option value="extras">🧀 Extras</option>
+                <option value="pastas">🍝 Pastas</option>
+              </select>
 
-            {adicionales.length > 0 && (
-              <ul className="mt-2 space-y-1 max-h-32 overflow-auto">
-                {adicionales.map((a, i) => (
-                  <li
-                    key={i}
-                    className="flex justify-between items-center bg-gray-200 px-3 py-1 rounded"
-                  >
-                    <span>{a}</span>
-                    <button
-                      onClick={() => eliminarAdicional(i)}
-                      className="bg-red-500 text-white px-2 py-0.5 rounded"
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={adicional}
+                  onChange={(e) => setAdicional(e.target.value)}
+                  className="w-full px-4 py-2 border rounded-lg bg-gray-100"
+                  placeholder="Agregar adicional"
+                />
+                <button
+                  onClick={agregarAdicional}
+                  className="bg-green-600 text-white px-4 rounded-lg"
+                >
+                  +
+                </button>
+              </div>
+
+              {adicionales.length > 0 && (
+                <ul className="mt-2 space-y-1 max-h-32 overflow-auto">
+                  {adicionales.map((a, i) => (
+                    <li
+                      key={i}
+                      className="flex justify-between items-center bg-gray-200 px-3 py-1 rounded"
                     >
-                      X
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
+                      <span>{a}</span>
+                      <button
+                        onClick={() => eliminarAdicional(i)}
+                        className="bg-red-500 text-white px-2 py-0.5 rounded"
+                      >
+                        X
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </>
+          )}
+
+          {tipo === "bebida" && (
+            <div className="flex gap-4 mt-2">
+              <label className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  checked={!alcohol}
+                  onChange={() => setAlcohol(false)}
+                />
+                Sin alcohol
+              </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  checked={alcohol}
+                  onChange={() => setAlcohol(true)}
+                />
+                Con alcohol
+              </label>
+            </div>
+          )}
+        </div>
 
         <div className="flex justify-end gap-4 mt-6">
           <button

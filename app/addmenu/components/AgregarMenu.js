@@ -249,6 +249,9 @@ export default function AgregarMenu() {
                   <option value="extras" className="text-black">
                     🧀 Extras
                   </option>
+                  <option value="pastas" className="text-black">
+                    🍝 Pastas
+                  </option>
                 </select>
               </div>
             ) : (

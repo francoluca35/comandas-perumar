@@ -13,11 +13,11 @@ export default function AgregarMenu() {
   const { agregarMenu, loading } = useAgregarMenu();
   const { productos, refetch } = useProductos();
   const [modo, setModo] = useState("agregar");
+  const [categoria, setCategoria] = useState("brasas");
 
   const [nombre, setNombre] = useState("");
   const [tipo, setTipo] = useState("comida");
   const [precio, setPrecio] = useState("");
-  const [precioConIVA, setPrecioConIVA] = useState("");
   const [descuento, setDescuento] = useState("");
   const [alcohol, setAlcohol] = useState(false);
   const [adicional, setAdicional] = useState("");
@@ -57,13 +57,16 @@ export default function AgregarMenu() {
     formData.append("nombre", nombre);
     formData.append("tipo", tipo);
     formData.append("precio", precio);
-    formData.append("precioConIVA", precioConIVA);
     formData.append("descuento", descuento || "");
     formData.append(
       "adicionales",
       JSON.stringify(tipo === "comida" ? adicionales : [])
     );
-    if (tipo === "bebida") formData.append("alcohol", alcohol);
+    if (tipo === "bebida") {
+      formData.append("alcohol", alcohol);
+    } else if (tipo === "comida") {
+      formData.append("categoria", categoria);
+    }
     if (file) formData.append("file", file);
 
     await agregarMenu(formData);
@@ -71,7 +74,6 @@ export default function AgregarMenu() {
 
     setNombre("");
     setPrecio("");
-    setPrecioConIVA("");
     setDescuento("");
     setAdicional("");
     setAdicionales([]);
@@ -217,14 +219,52 @@ export default function AgregarMenu() {
               </div>
             )}
 
-            <input
-              type="text"
-              placeholder="Nombre"
-              value={nombre}
-              onChange={(e) => setNombre(e.target.value)}
-              className="w-full px-5 py-3 rounded-xl bg-white/10 text-white border border-gray-600"
-              required
-            />
+            {tipo === "comida" ? (
+              <div className="sm:col-span-2 flex flex-col md:flex-row gap-4">
+                <input
+                  type="text"
+                  placeholder="Nombre"
+                  value={nombre}
+                  onChange={(e) => setNombre(e.target.value)}
+                  className="w-full px-5 py-3 rounded-xl bg-white/10 text-white border border-gray-600"
+                  required
+                />
+                <select
+                  value={categoria}
+                  onChange={(e) => setCategoria(e.target.value)}
+                  className="w-full md:w-1/2 px-5 py-3 rounded-xl bg-white/10 text-white border border-gray-600"
+                >
+                  <option value="brasas" className="text-black">
+                    🔥 Brasas
+                  </option>
+                  <option value="salteados y criollos" className="text-black">
+                    🍲 Salteados y Criollos
+                  </option>
+                  <option value="pescados y mariscos" className="text-black">
+                    🐟 Pescados y Mariscos
+                  </option>
+                  <option value="menu diario" className="text-black">
+                    🍽️ Menu diario
+                  </option>
+                  <option value="extras" className="text-black">
+                    🧀 Extras
+                  </option>
+                  <option value="pastas" className="text-black">
+                    🍝 Pastas
+                  </option>
+                </select>
+              </div>
+            ) : (
+              <input
+                type="text"
+                placeholder="Nombre"
+                value={nombre}
+                onChange={(e) => setNombre(e.target.value)}
+                className="w-full px-5 py-3 rounded-xl bg-white/10 text-white border border-gray-600"
+                required
+              />
+            )}
+
             <input
               type="number"
               placeholder="Precio"
@@ -233,14 +273,7 @@ export default function AgregarMenu() {
               className="w-full px-5 py-3 rounded-xl bg-white/10 text-white border border-gray-600"
               required
             />
-            <input
-              type="number"
-              placeholder="Precio con IVA"
-              value={precioConIVA}
-              onChange={(e) => setPrecioConIVA(e.target.value)}
-              className="w-full px-5 py-3 rounded-xl bg-white/10 text-white border border-gray-600"
-              required
-            />
+
             <input
               type="number"
               placeholder="Descuento (opcional)"
@@ -331,11 +364,76 @@ export default function AgregarMenu() {
           </form>
         )}
 
-        {/* EDITAR */}
         {modo === "editar" && (
           <>
-            {/* Editar / Eliminar productos (ya lo tenés funcional) */}
-            {/* ModalEditarProducto también ya implementado */}
+            <div className="mb-4 flex justify-center">
+              <input
+                type="text"
+                placeholder="Buscar producto..."
+                value={busqueda}
+                onChange={(e) => {
+                  setBusqueda(e.target.value);
+                  setPaginaActual(1);
+                }}
+                className="w-full max-w-sm px-4 py-2 rounded-xl bg-white/20 text-white placeholder-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+              />
+            </div>
+
+            <div className="space-y-4">
+              {productosPaginados?.map((p) => (
+                <div
+                  key={p._id}
+                  className="flex justify-between items-center bg-white/10 p-4 rounded-xl border border-white/10 text-white"
+                >
+                  <div>
+                    <p className="font-bold">{p.nombre}</p>
+                    <p className="text-sm text-cyan-300">
+                      Precio: ${p.precio} / IVA: ${p.precioConIVA}
+                    </p>
+                    {p.tipo === "bebida" && (
+                      <p className="text-sm text-yellow-400">
+                        {p.alcohol ? "Con alcohol" : "Sin alcohol"}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setProductoEditar(p)}
+                      className="bg-orange-500 hover:bg-orange-600 text-sm px-3 py-1 rounded-xl"
+                    >
+                      Editar
+                    </button>
+                    <button
+                      onClick={() => handleEliminar(p._id)}
+                      className="bg-red-600 hover:bg-red-700 text-sm px-3 py-1 rounded-xl"
+                    >
+                      Eliminar
+                    </button>
+                  </div>
+                </div>
+              ))}
+
+              <div className="flex justify-center items-center mt-6 gap-4">
+                <button
+                  onClick={() => setPaginaActual(paginaActual - 1)}
+                  disabled={paginaActual === 1}
+                  className="bg-white/10 border border-white/20 text-white px-4 py-2 rounded-xl disabled:opacity-30"
+                >
+                  ← Anterior
+                </button>
+                <span className="text-white">
+                  {paginaActual} / {totalPaginas}
+                </span>
+                <button
+                  onClick={() => setPaginaActual(paginaActual + 1)}
+                  disabled={paginaActual === totalPaginas}
+                  className="bg-white/10 border border-white/20 text-white px-4 py-2 rounded-xl disabled:opacity-30"
+                >
+                  Siguiente →
+                </button>
+              </div>
+            </div>
+
             {productoEditar && (
               <ModalEditarProducto
                 producto={productoEditar}
